@@ -25,8 +25,10 @@ local runservice = game:GetService("RunService");
 
 --common funcs
 local wtvp = camera.WorldToViewportPoint;
+local wtsp = camera.WorldToScreenPoint;
 local isa = game.IsA;
 local findfirstchild = game.FindFirstChild;
+local findfirstchildofclass = game.FindFirstChildOfClass;
 
 local abs = math.abs;
 
@@ -176,10 +178,10 @@ function esplib:addesp(plr)
             local o, size = utils:getboundingbox(character);
             local truecenter = Vector3.new(character.HumanoidRootPart.Position.X, o.Y, character.HumanoidRootPart.Position.Z);
             local height = Vector3.new(0, size.Y / 2, 0);
-            local up = camera:WorldToScreenPoint(truecenter + height);
-            local down = camera:WorldToScreenPoint(truecenter - height);
+            local up = wtsp(camera, truecenter + height);
+            local down = wtsp(camera, truecenter - height);
             local trueheight = math.abs(up.Y - down.Y);
-            local pos, onscreen = camera:WorldToViewportPoint(truecenter);
+            local pos, onscreen = wtvp(camera, truecenter);
             local dist = utils:round(pos.Z);
             if onscreen then
                 if self.box then
@@ -232,12 +234,20 @@ function esplib:addesp(plr)
                     ret.objects.boxoutline1.Visible = false;
                     ret.objects.boxoutline2.Visible = false;
                     ret.objects.healthoutline1.Visible = false;
+                    ret.objects.nametext.Outline = false;
+                    ret.objects.hptext.Outline = false;
                 end
 
                 if self.limitdistance then
                     if dist > self.maxdistance then
                         for i,v in pairs(ret.objects) do
-                            v.Transparency = math.clamp(self.maxdistance / dist - 0.1, 0.01, 1);
+                            local newtransparency = (self.maxdistance / dist);
+                            local _, fraction = math.modf(newtransparency);
+                            if fraction <= 0.1 then
+                                newtransparency = 0;
+                            end
+                            newtransparency = math.clamp(newtransparency, 0, 1);
+                            v.Transparency = newtransparency;
                         end
                     end
                 end
@@ -267,9 +277,7 @@ end
 
 function esplib:init()
     for i,v in pairs(players:GetPlayers()) do
-        if v.Character then
-            coroutine.wrap(self.addesp)(self, v);
-        end
+        coroutine.wrap(self.addesp)(self, v);
     end
     players.PlayerRemoving:Connect(function(plr)
         self:removeplr(plr);
@@ -279,4 +287,4 @@ function esplib:init()
     end);
 end
 
-return esplib
+return esplib;
